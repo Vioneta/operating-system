@@ -26,9 +26,9 @@ on:
       TEBI_OS_ARTIFACTS_ENDPOINT:
         required: true
       CF_ZONE:
-        required: true
+        required: false
       CF_PURGE_TOKEN:
-        required: true
+        required: false
 
 env:
   PYTHON_VERSION: "3.10"
