@@ -6,7 +6,7 @@
 output*/
 
 # Certificates
-*.pem
+# *.pem
 
 # vscode generated files
 .vscode*
