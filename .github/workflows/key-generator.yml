@@ -1,0 +1,84 @@
+name: Generate PEM Certificates
+
+on:
+  workflow_dispatch: # Manual trigger for generating certificates
+
+jobs:
+  generate-certs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up OpenSSL environment
+        run: |
+          mkdir -p certs/root-ca certs/dev-ca certs/release-ca certs/end-entity
+          touch certs/index.txt
+          echo 01 > certs/serial
+
+      - name: Generate Root CA (PEM format)
+        run: |
+          openssl genrsa -out certs/root-ca/vioneta-root-ca.key.pem 4096
+          openssl req -x509 -new -nodes \
+            -key certs/root-ca/vioneta-root-ca.key.pem \
+            -sha256 -days 3650 \
+            -subj "/CN=Vioneta Root CA" \
+            -out certs/root-ca/vioneta-root-ca.crt.pem
+
+      - name: Generate Development Intermediate CA (PEM format)
+        run: |
+          openssl genrsa -out certs/dev-ca/vioneta-dev-ca.key.pem 4096
+          openssl req -new -key certs/dev-ca/vioneta-dev-ca.key.pem \
+            -subj "/CN=Vioneta Dev CA" \
+            -out certs/dev-ca/vioneta-dev-ca.csr.pem
+          openssl x509 -req -in certs/dev-ca/vioneta-dev-ca.csr.pem \
+            -CA certs/root-ca/vioneta-root-ca.crt.pem \
+            -CAkey certs/root-ca/vioneta-root-ca.key.pem \
+            -CAcreateserial -out certs/dev-ca/vioneta-dev-ca.crt.pem \
+            -days 1825 -sha256
+
+      - name: Generate Release Intermediate CA (PEM format)
+        run: |
+          openssl genrsa -out certs/release-ca/vioneta-release-ca.key.pem 4096
+          openssl req -new -key certs/release-ca/vioneta-release-ca.key.pem \
+            -subj "/CN=Vioneta Release CA" \
+            -out certs/release-ca/vioneta-release-ca.csr.pem
+          openssl x509 -req -in certs/release-ca/vioneta-release-ca.csr.pem \
+            -CA certs/root-ca/vioneta-root-ca.crt.pem \
+            -CAkey certs/root-ca/vioneta-root-ca.key.pem \
+            -CAcreateserial -out certs/release-ca/vioneta-release-ca.crt.pem \
+            -days 1825 -sha256
+
+      - name: Generate Development End-Entity Certificate (PEM format)
+        run: |
+          openssl genrsa -out certs/end-entity/vioneta-dev.key.pem 4096
+          openssl req -new -key certs/end-entity/vioneta-dev.key.pem \
+            -subj "/CN=Vioneta Development Certificate" \
+            -out certs/end-entity/vioneta-dev.csr.pem
+          openssl x509 -req -in certs/end-entity/vioneta-dev.csr.pem \
+            -CA certs/dev-ca/vioneta-dev-ca.crt.pem \
+            -CAkey certs/dev-ca/vioneta-dev-ca.key.pem \
+            -CAcreateserial -out certs/end-entity/vioneta-dev.crt.pem \
+            -days 365 -sha256
+
+      - name: Generate Release End-Entity Certificate (PEM format)
+        run: |
+          openssl genrsa -out certs/end-entity/vioneta-release.key.pem 4096
+          openssl req -new -key certs/end-entity/vioneta-release.key.pem \
+            -subj "/CN=Vioneta Release Certificate" \
+            -out certs/end-entity/vioneta-release.csr.pem
+          openssl x509 -req -in certs/end-entity/vioneta-release.csr.pem \
+            -CA certs/release-ca/vioneta-release-ca.crt.pem \
+            -CAkey certs/release-ca/vioneta-release-ca.key.pem \
+            -CAcreateserial -out certs/end-entity/vioneta-release.crt.pem \
+            -days 365 -sha256
+
+      - name: Archive Certificates
+        run: |
+          tar -czvf certs.tar.gz certs/
+
+      - name: Upload PEM Certificates as Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: vioneta-certificates-pem
+          path: certs.tar.gz
