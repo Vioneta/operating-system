@@ -78,7 +78,7 @@ jobs:
           tar -czvf certs.tar.gz certs/
 
       - name: Upload PEM Certificates as Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: vioneta-certificates-pem
           path: certs.tar.gz
